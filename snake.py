@@ -9,7 +9,7 @@ from astar import aStarSearching
 
 class Apple:
     # x position
-    # y position 
+    # y position
     # step for game move
 
     def __init__(self, x, y, step):
@@ -20,9 +20,10 @@ class Apple:
     def draw(self, surface, image):
         surface.blit(image, (self.x, self.y))
 
-    def relocate(self):
-        self.x = randint(2, 9) * self.step
-        self.y = randint(2, 9) * self.step
+    def relocate(self, snake):
+        while (self.x, self.y) in snake:
+            self.x = randint(2, 11) * self.step
+            self.y = randint(2, 11) * self.step
 
 
 class Snake:
@@ -35,7 +36,7 @@ class Snake:
     updateCountMax = 2
     updateCount = 0
 
-    def __init__(self, length, step = 20):
+    def __init__(self, length, step=20):
         self.length = length
         self.direction = 0
         self.IncreaseFlag = False
@@ -47,9 +48,8 @@ class Snake:
         self.y = [0 for i in range(self.length)]
         self.x[1] = 1*self.step
         self.x[0] = 2*self.step
-        
 
-    def update(self, modele = 0):
+    def update(self, modele=0):
         if modele == 0:
             self.updateCount = self.updateCount + 1
             if self.updateCount <= self.updateCountMax:
@@ -63,7 +63,7 @@ class Snake:
 
         else:
             # Regular update previous positions
-            for i in range(self.length-1,0,-1):
+            for i in range(self.length-1, 0, -1):
                 self.x[i] = self.x[i-1]
                 self.y[i] = self.y[i-1]
 
@@ -82,17 +82,17 @@ class Snake:
     def Increase(self):
         # update position of head of snake
         if self.direction == 0:
-            self.x.insert(0,self.x[0]+self.step)
-            self.y.insert(0,self.y[0])
+            self.x.insert(0, self.x[0]+self.step)
+            self.y.insert(0, self.y[0])
         if self.direction == 1:
-            self.x.insert(0,self.x[0]-self.step)
-            self.y.insert(0,self.y[0])
+            self.x.insert(0, self.x[0]-self.step)
+            self.y.insert(0, self.y[0])
         if self.direction == 2:
-            self.y.insert(0,self.y[0]-self.step)
-            self.x.insert(0,self.x[0])
+            self.y.insert(0, self.y[0]-self.step)
+            self.x.insert(0, self.x[0])
         if self.direction == 3:
-            self.y.insert(0,self.y[0]+self.step)
-            self.x.insert(0,self.x[0])
+            self.y.insert(0, self.y[0]+self.step)
+            self.x.insert(0, self.x[0])
 
         self.length += 1
         self.IncreaseFlag = False
@@ -101,14 +101,13 @@ class Snake:
 
     def Decrease(self):
         # update position of head of snake
-        self.length = randint(1,self.length-1)
+        self.length = randint(2, self.length-1)
         self.x = self.x[:self.length]
-        self.y = self.y[:self.length] 
+        self.y = self.y[:self.length]
 
         self.DecreaseFlag = False
         print(self.x[:self.length])
         print(self.y[:self.length])
-    
 
     def moveRight(self):
         self.direction = 0
@@ -143,7 +142,7 @@ class App:
     # module 0 is play with a gamer
     # module 1 is play with a random choise
     # modele 2 for a A start
-    def __init__(self, module=0, step = 20, isprint = False):
+    def __init__(self, module=0, step=20, isprint=False):
         self._running = True
         self.module = module
         self._display_surf = None
@@ -152,11 +151,10 @@ class App:
         self._apple_surf_deathly = None
         self.step = step
         self.game = Game()
-        self.snake = Snake(3,step)
+        self.snake = Snake(3, step)
         self.apple_healthy = Apple(5, 5, step)
-        self.apple_deathly = Apple(10, 10, step )
+        self.apple_deathly = Apple(10, 10, step)
         self.isprint = isprint
-       
 
     def on_init(self):
         pygame.init()
@@ -173,14 +171,15 @@ class App:
             pygame.image.load("magicapple.png").convert(), (self.step, self.step))
 
     def appleUpdate(self):
-        self.apple_deathly.relocate()
-        self.apple_healthy.relocate()
+        snake = [(self.snake.x[i],self.snake.y[i]) for i in range(self.snake.length)]
+        self.apple_deathly.relocate(snake)
+        self.apple_healthy.relocate(snake)
         while self.game.isCollision(self.apple_deathly.x, self.apple_deathly.y, self.apple_healthy.x, self.apple_healthy.y):
-            self.apple_healthy.relocate()
+            self.apple_healthy.relocate(snake)
 
     def getCurrentState(self):
         if(self.snake.length < 5):
-            vision_size= self.snake.length
+            vision_size = self.snake.length
         else:
             vision_size = 5
         currentState = [[0 for row in range(vision_size*2+1)]
@@ -191,36 +190,39 @@ class App:
         # print for snake
         for i in range(self.snake.length):
             if self.snake.x[i]//self.step - x_head//self.step + vision_size >= 0 \
-                and self.snake.x[i]//self.step - x_head//self.step + vision_size < vision_size*2+1 \
-                and self.snake.y[i]//self.step - y_head//self.step + vision_size >= 0 \
-                and self.snake.y[i]//self.step - y_head//self.step + vision_size < vision_size*2+1 :
-                
-                currentState[self.snake.y[i]//self.step - y_head//self.step + vision_size]\
-                    [self.snake.x[i]//self.step - x_head//self.step + vision_size] \
-                     = 1
+                    and self.snake.x[i]//self.step - x_head//self.step + vision_size < vision_size*2+1 \
+                    and self.snake.y[i]//self.step - y_head//self.step + vision_size >= 0 \
+                    and self.snake.y[i]//self.step - y_head//self.step + vision_size < vision_size*2+1:
+
+                currentState[self.snake.y[i]//self.step - y_head//self.step + vision_size][self.snake.x[i]//self.step - x_head//self.step + vision_size] \
+                    = 1
 
         # check distance between snake and apples
         dist_good_x = abs(x_head - self.apple_healthy.x)//self.step
-        if x_head < self.apple_healthy.x: dist_good_x *= -1
+        if x_head < self.apple_healthy.x:
+            dist_good_x *= -1
 
         dist_good_y = abs(y_head - self.apple_healthy.y)//self.step
-        if y_head < self.apple_healthy.y: dist_good_y *= -1
+        if y_head < self.apple_healthy.y:
+            dist_good_y *= -1
 
         dist_bad_x = abs(x_head - self.apple_deathly.x)//self.step
-        if x_head < self.apple_deathly.x: dist_bad_x *= -1
+        if x_head < self.apple_deathly.x:
+            dist_bad_x *= -1
 
         dist_bad_y = abs(y_head - self.apple_deathly.y)//self.step
-        if y_head < self.apple_deathly.y: dist_bad_y *= -1
+        if y_head < self.apple_deathly.y:
+            dist_bad_y *= -1
 
         if self.isprint:
             for row in currentState:
                 print(row)
-            
-            print("position for good apple: ", (dist_good_x, dist_good_y), "\npositon for bad apple: ", (dist_bad_x, dist_bad_y))
+
+            print("position for good apple: ", (dist_good_x, dist_good_y),
+                  "\npositon for bad apple: ", (dist_bad_x, dist_bad_y))
             print(self.snake.x[:self.snake.length])
             print(self.snake.y[:self.snake.length])
         return (currentState, self.snake.direction, (dist_good_x, dist_good_y), (dist_bad_x, dist_bad_y))
-        
 
     def on_event(self, event):
         if event.type == QUIT:
@@ -246,7 +248,7 @@ class App:
             if self.game.isCollision(self.apple_healthy.x, self.apple_healthy.y, self.snake.x[i], self.snake.y[i]):
                 print("Eat a good apple")
                 self.appleUpdate()
-                self.snake.IncreaseFlag=True
+                self.snake.IncreaseFlag = True
                 self.apple += 1
 
             # eat a deathly apple to die
@@ -257,7 +259,7 @@ class App:
                     self.appleUpdate()
                 else:
                     print("You lose! Collision by eatting An apple from the hell")
-                    print("You have eaten ")
+                    print("You have eaten ", self.apple, " apples")
                     print("x[0] (" + str(self.snake.x[0]) +
                           "," + str(self.snake.y[0]) + ")")
                     print("x[" + str(i) + "] (" + str(self.snake.x[i]
@@ -269,6 +271,7 @@ class App:
         for i in range(1, self.snake.length):
             if self.game.isCollision(self.snake.x[0], self.snake.y[0], self.snake.x[i], self.snake.y[i]):
                 print("You lose! Collision by bitting yourself ")
+                print("You have eaten ", self.apple, " apples")
                 print("x[0] (" + str(self.snake.x[0]) +
                       "," + str(self.snake.y[0]) + ")")
                 print("x[" + str(i) + "] (" + str(self.snake.x[i]) +
@@ -312,10 +315,13 @@ class App:
                 if (keys[K_ESCAPE]):
                     self._running = False
 
-
             if self.module == 1:
                 select = 0
-                select = aStarSearching(self.snake.x,self.snake.y, self.apple_healthy.x, self.apple_healthy.y, self.step, self.snake.direction)
+                select = aStarSearching(self.snake.x, self.snake.y, \
+                            self.apple_healthy.x, self.apple_healthy.y, \
+                            self.apple_deathly.x, self.apple_deathly.y, \
+                            self.step, self.snake.direction)
+
                 if (select == 1):
                     self.snake.moveRight()
 
@@ -342,7 +348,6 @@ class App:
             # #READ FROM FILE
             # with open('listfile.txt', 'r') as filehandle:
             #     basicList = json.load(filehandle)
-                
 
             time.sleep(100.0 / 1000.0)
         self.on_cleanup()
@@ -354,10 +359,10 @@ if __name__ == "__main__":
     isprint = False
     if sys.argv.__len__ != 0:
         for agm in sys.argv:
-            if agm == "-a": # A-star
+            if agm == "-a":  # A-star
                 module = 1
             if agm == "-p":
                 isprint = True
 
-    theApp = App(module,isprint=isprint)
+    theApp = App(module, isprint=isprint)
     theApp.on_execute()
