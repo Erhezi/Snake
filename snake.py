@@ -3,6 +3,8 @@ from pygame.locals import *
 from random import randint, random
 import time
 import sys
+import json
+from astar import aStarSearching
 
 
 class Apple:
@@ -47,33 +49,35 @@ class Snake:
         self.x[0] = 2*self.step
         
 
-    def update(self):
+    def update(self, modele = 0):
+        if modele == 0:
+            self.updateCount = self.updateCount + 1
+            if self.updateCount <= self.updateCountMax:
+                return
 
-        self.updateCount = self.updateCount + 1
-        if self.updateCount > self.updateCountMax:
-            if self.IncreaseFlag:
-                self.Increase()
+        if self.IncreaseFlag:
+            self.Increase()
 
-            elif self.DecreaseFlag:
-                self.Decrease()
+        elif self.DecreaseFlag:
+            self.Decrease()
 
-            else:
-                # Regular update previous positions
-                for i in range(self.length-1,0,-1):
-                    self.x[i] = self.x[i-1]
-                    self.y[i] = self.y[i-1]
+        else:
+            # Regular update previous positions
+            for i in range(self.length-1,0,-1):
+                self.x[i] = self.x[i-1]
+                self.y[i] = self.y[i-1]
 
-                # update position of head of snake
-                if self.direction == 0:
-                    self.x[0] += self.step
-                if self.direction == 1:
-                    self.x[0] -= self.step
-                if self.direction == 2:
-                    self.y[0] -= self.step
-                if self.direction == 3:
-                    self.y[0] += self.step
+            # update position of head of snake
+            if self.direction == 0:
+                self.x[0] += self.step
+            if self.direction == 1:
+                self.x[0] -= self.step
+            if self.direction == 2:
+                self.y[0] -= self.step
+            if self.direction == 3:
+                self.y[0] += self.step
 
-            self.updateCount = 0
+        self.updateCount = 0
 
     def Increase(self):
         # update position of head of snake
@@ -171,8 +175,14 @@ class App:
     def appleUpdate(self):
         self.apple_deathly.relocate()
         self.apple_healthy.relocate()
+        while self.game.isCollision(self.apple_deathly.x, self.apple_deathly.y, self.apple_healthy.x, self.apple_healthy.y):
+            self.apple_healthy.relocate()
 
-    def getCurrentState(self, vision_size = 2, isprint=True):
+    def getCurrentState(self):
+        if(self.snake.length < 5):
+            vision_size= self.snake.length
+        else:
+            vision_size = 5
         currentState = [[0 for row in range(vision_size*2+1)]
                         for col in range(vision_size*2+1)]
         x_head = self.snake.x[self.snake.length-1]
@@ -206,10 +216,10 @@ class App:
             for row in currentState:
                 print(row)
             
-            print("position for good apple: ", (dist_good_x, dist_good_y), "\n positon for bad apple: ", (dist_bad_x, dist_bad_y))
+            print("position for good apple: ", (dist_good_x, dist_good_y), "\npositon for bad apple: ", (dist_bad_x, dist_bad_y))
             print(self.snake.x[:self.snake.length])
             print(self.snake.y[:self.snake.length])
-        return 
+        return (currentState, self.snake.direction, (dist_good_x, dist_good_y), (dist_bad_x, dist_bad_y))
         
 
     def on_event(self, event):
@@ -217,7 +227,7 @@ class App:
             self._running = False
 
     def on_loop(self):
-        self.snake.update()
+        self.snake.update(self.module)
 
         # does snake collide with itself?
         for i in range(0, self.snake.length):
@@ -281,9 +291,6 @@ class App:
         if self.on_init() == False:
             self._running = False
 
-        selections = [1 for j in range(40)] + [4 for j in range(40)] + [2 for j in range(30)] + [3 for j in range(30)]
-        i = 0
-
         while(self._running):
             pygame.event.pump()
 
@@ -305,29 +312,10 @@ class App:
                 if (keys[K_ESCAPE]):
                     self._running = False
 
+
             if self.module == 1:
-                select = selections[i]
-                if (select == 1):
-                    self.snake.moveRight()
-                if (select == 2):
-                    self.snake.moveLeft()
-
-                if (select == 3):
-                    self.snake.moveUp()
-
-                if (select == 4):
-                    self.snake.moveDown()
-
-                if (select == 5):
-                    self._running = False
-
-                i += 1
-                if i == len(selections):
-                    i = 0
-
-            if self.module == 2:
                 select = 0
-                # select = GetAction()
+                select = aStarSearching(self.snake.x,self.snake.y, self.apple_healthy.x, self.apple_healthy.y, self.step, self.snake.direction)
                 if (select == 1):
                     self.snake.moveRight()
 
@@ -345,7 +333,16 @@ class App:
 
             self.on_loop()
             self.on_render()
-            self.getCurrentState(2)
+            self.getCurrentState()
+
+            # # WRITE TO FILE
+            # with open("record","a") as file:
+            #     json.dump(self.getCurrentState(), file)
+
+            # #READ FROM FILE
+            # with open('listfile.txt', 'r') as filehandle:
+            #     basicList = json.load(filehandle)
+                
 
             time.sleep(100.0 / 1000.0)
         self.on_cleanup()
@@ -354,12 +351,11 @@ class App:
 if __name__ == "__main__":
 
     module = 0
+    isprint = False
     if sys.argv.__len__ != 0:
         for agm in sys.argv:
-            if agm == "-r":
+            if agm == "-a": # A-star
                 module = 1
-            elif agm == "-m":
-                module = 2
             if agm == "-p":
                 isprint = True
 
