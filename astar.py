@@ -22,11 +22,45 @@
 #
 # The depth of searching is a tricky one.
 
-import numpy as np 
 import collections
+from random import random
 
+def decode(state, snake, apple_good_x, apple_good_y, apple_magic_x, apple_magic_y,step):
+    iswatchingapple_good, iswatchingapple_magic = False, False
+    if any([10000 in row for row in state]):
+        index_row_good = [10000 in row for row in state].index(True)
+        index_col_good = state[index_row_good].index(10000)
+        iswatchingapple_good = True
+    
+    if any([-10000 in row for row in state]):
+        index_row_magic = [-10000 in row for row in state].index(True)
+        index_col_magic = state[index_row_magic].index(-10000)
+        iswatchingapple_magic=True
 
-def aStarSearching(snake_x,snake_y, apple_x,apple_y, apple_x_magic, apple_y_magic,step,direction):
+    if iswatchingapple_good and iswatchingapple_magic:
+        return aStarSearching(snake.x, snake.y, \
+            apple_good_x, apple_good_y, \
+            apple_magic_x, apple_magic_y, \
+            step, snake.direction)
+    
+    if iswatchingapple_good:
+        return aStarSearching(snake.x, snake.y, \
+            apple_good_x, apple_good_y, \
+            -100, -100, \
+            step, snake.direction)
+
+    if random() > 0.1 : return snake.direction
+    else:
+        if snake.direction == 0:
+            return 3
+        if snake.direction == 1:
+            return 2
+        if snake.direction == 2:
+            return 0
+        if snake.direction == 3:
+            return 2
+
+def aStarSearching(snake_x,snake_y, apple_x,apple_y, apple_x_magic, apple_y_magic,step,direction,length):
     snake = [(snake_x[i], snake_y[i]) for i in range(len(snake_x))]
     fronter = collections.defaultdict(int)
     fronter[snake[0]] = GetH(snake[0][0],snake[0][1],apple_x,apple_y)
@@ -62,7 +96,7 @@ def aStarSearching(snake_x,snake_y, apple_x,apple_y, apple_x_magic, apple_y_magi
                     fronter[(xnew,ynew)] = GetH(xnew,ynew,apple_x,apple_y) + count
         print("After exploring Current explied:", exploied, "\n")
         count += 1
-        if count > 100: break
+        if count > length: break
     print("After exploring Current explied:", exploied, "\n")
     if len(exploied)<2: return direction
     return translateSign(exploied[1][0],exploied[1][1], exploied[0][0], exploied[0][1])
@@ -76,14 +110,15 @@ def GetH (x1,y1,x2,y2):
 def translateSign(x1,y1,hx,hy):
     if x1>hx: 
         print("Selected Right")
-        return 1
+        return 0
     if x1<hx:
         print("Selected Left") 
+        return 1
+    if y1<hy: 
+        print("Selected Up")
         return 2
     if y1>hy: 
         print("Selected Down")
-        return 4
-    if y1<hy: 
-        print("Selected Up")
         return 3
+   
 

@@ -4,7 +4,10 @@ from random import randint, random
 import time
 import sys
 import json
-from astar import aStarSearching
+import numpy as np
+from astar import decode, aStarSearching
+from qLearning import Qlearning
+from collections import defaultdict
 
 
 class Apple:
@@ -21,6 +24,8 @@ class Apple:
         surface.blit(image, (self.x, self.y))
 
     def relocate(self, snake):
+        self.x = randint(2, 11) * self.step
+        self.y = randint(2, 11) * self.step
         while (self.x, self.y) in snake:
             self.x = randint(2, 11) * self.step
             self.y = randint(2, 11) * self.step
@@ -101,6 +106,10 @@ class Snake:
 
     def Decrease(self):
         # update position of head of snake
+        if self.length <= 2: 
+            self.DecreaseFlag = False
+            return
+
         self.length = randint(2, self.length-1)
         self.x = self.x[:self.length]
         self.y = self.y[:self.length]
@@ -142,7 +151,7 @@ class App:
     # module 0 is play with a gamer
     # module 1 is play with a random choise
     # modele 2 for a A start
-    def __init__(self, module=0, step=20, isprint=False):
+    def __init__(self, module=0, step=20, vision_size = 2, isprint=False, ):
         self._running = True
         self.module = module
         self._display_surf = None
@@ -155,6 +164,7 @@ class App:
         self.apple_healthy = Apple(5, 5, step)
         self.apple_deathly = Apple(10, 10, step)
         self.isprint = isprint
+        self.vision_size = vision_size
 
     def on_init(self):
         pygame.init()
@@ -177,15 +187,18 @@ class App:
         while self.game.isCollision(self.apple_deathly.x, self.apple_deathly.y, self.apple_healthy.x, self.apple_healthy.y):
             self.apple_healthy.relocate(snake)
 
-    def getCurrentState(self):
-        if(self.snake.length < 5):
-            vision_size = self.snake.length
-        else:
-            vision_size = 5
-        currentState = [[0 for row in range(vision_size*2+1)]
-                        for col in range(vision_size*2+1)]
-        x_head = self.snake.x[self.snake.length-1]
-        y_head = self.snake.y[self.snake.length-1]
+    def encode(self):
+        # if(self.snake.length < 5):
+        #     vision_size = self.snake.length
+        # else:
+        #     vision_size = 5
+        vision_size = self.vision_size
+        # currentState = [[0 for row in range(vision_size*2+1)]
+        #                 for col in range(vision_size*2+1)]
+        currentState = np.zeros((vision_size*2+1,vision_size*2+1))
+        x_head = self.snake.x[0]
+        y_head = self.snake.y[0]
+
 
         # print for snake
         for i in range(self.snake.length):
@@ -195,25 +208,56 @@ class App:
                     and self.snake.y[i]//self.step - y_head//self.step + vision_size < vision_size*2+1:
 
                 currentState[self.snake.y[i]//self.step - y_head//self.step + vision_size][self.snake.x[i]//self.step - x_head//self.step + vision_size] \
-                    = 1
+                    = self.snake.y[i] + self.snake.x[i]
 
         # check distance between snake and apples
         dist_good_x = abs(x_head - self.apple_healthy.x)//self.step
-        if x_head < self.apple_healthy.x:
+        if x_head > self.apple_healthy.x:
             dist_good_x *= -1
 
         dist_good_y = abs(y_head - self.apple_healthy.y)//self.step
-        if y_head < self.apple_healthy.y:
+        if y_head > self.apple_healthy.y:
             dist_good_y *= -1
 
+        # show the apple if it is at the space
+        if dist_good_x + vision_size >= 0 \
+            and dist_good_x + vision_size < vision_size*2+1 \
+            and dist_good_y + vision_size >= 0 \
+            and dist_good_y + vision_size < vision_size*2+1:
+
+            currentState[dist_good_y + vision_size][dist_good_x + vision_size] \
+            = 10000
+
         dist_bad_x = abs(x_head - self.apple_deathly.x)//self.step
-        if x_head < self.apple_deathly.x:
+        if x_head > self.apple_deathly.x:
             dist_bad_x *= -1
 
         dist_bad_y = abs(y_head - self.apple_deathly.y)//self.step
-        if y_head < self.apple_deathly.y:
+        if y_head > self.apple_deathly.y:
             dist_bad_y *= -1
 
+        # show the apple if it is at the space    
+        if dist_bad_x + vision_size >= 0 \
+            and dist_bad_x + vision_size < vision_size*2+1 \
+            and dist_bad_y + vision_size >= 0 \
+            and dist_bad_y + vision_size < vision_size*2+1:
+
+            currentState[dist_bad_y + vision_size][dist_bad_x + vision_size] \
+            = -10000
+
+        # check the space boundary 
+        # If it out space states -1
+        for row_index in range(vision_size*2+1):
+            if y_head-(vision_size-row_index)*self.step < 0 or \
+                y_head-(vision_size-row_index)*self.step >= self.windowHeight:
+                for col_index in range(vision_size*2+1):
+                    currentState[row_index][col_index] = -1
+            else:                
+                for col_index in range(vision_size*2+1):
+                    if x_head-(vision_size-col_index)*self.step < 0 or \
+                        x_head-(vision_size-col_index)*self.step >= self.windowWidth:
+                        currentState[row_index][col_index] = -1
+            
         if self.isprint:
             for row in currentState:
                 print(row)
@@ -222,62 +266,114 @@ class App:
                   "\npositon for bad apple: ", (dist_bad_x, dist_bad_y))
             print(self.snake.x[:self.snake.length])
             print(self.snake.y[:self.snake.length])
-        return (currentState, self.snake.direction, (dist_good_x, dist_good_y), (dist_bad_x, dist_bad_y))
+        return np.array2string(currentState)
+
+
+
+    def getDistanceOfGoodApple(self):
+        return abs(self.snake.x[0]-self.apple_healthy.x)+abs(self.snake.y[0]-self.apple_healthy.y)
+    
+    def getDistanceOfMagicApple(self):
+        return abs(self.snake.x[0]-self.apple_deathly.x)+abs(self.snake.y[0]-self.apple_deathly.y)
 
     def on_event(self, event):
         if event.type == QUIT:
             self._running = False
 
-    def on_loop(self):
+    def on_loop(self, agent = None):
+        # get state1
+        if agent != None: currentState = self.getStateFromAgent(agent)
+        distanceGoodApple = self.getDistanceOfGoodApple()
+        distanceMagicApple = self.getDistanceOfMagicApple()
+
+        # update case
         self.snake.update(self.module)
 
-        # does snake collide with itself?
+        # does snake collide with boundary?
         for i in range(0, self.snake.length):
-            if self.snake.x[i] == -100 or (self.snake.x[i] <= self.windowWidth and self.snake.x[i] >= 0):
-                if self.snake.y[i] == -100 or (self.snake.y[i] <= self.windowHeight and self.snake.y[i] >= 0):
+            if self.snake.x[i] == -100 or (self.snake.x[i] < self.windowWidth and self.snake.x[i] >= 0):
+                if self.snake.y[i] == -100 or (self.snake.y[i] < self.windowHeight and self.snake.y[i] >= 0):
                     continue
+
+            # update Q Table
+            if agent != None:
+                newstate = self.getStateFromAgent(agent)
+                agent.updateTable(currentState, newstate, -2, self.snake.direction)
 
             print("You out of region!")
             print(self.snake.x[:self.snake.length])
             print(self.snake.y[:self.snake.length])
-            exit(0)
+            self._running = False
+            return
 
         # does snake eat apple?
-        for i in range(0, self.snake.length):
-            # eat a healthy apple to grow up
-            if self.game.isCollision(self.apple_healthy.x, self.apple_healthy.y, self.snake.x[i], self.snake.y[i]):
-                print("Eat a good apple")
+        # eat a healthy apple to grow up
+        if self.game.isCollision(self.apple_healthy.x, self.apple_healthy.y, self.snake.x[0], self.snake.y[0]):
+            print("Eat a good apple")
+            self.appleUpdate()
+            self.snake.IncreaseFlag = True
+            self.apple += 1
+
+            # update Q Table
+            if agent != None:
+                newstate = self.getStateFromAgent(agent)
+                agent.updateTable(currentState, newstate, 10, self.snake.direction)
+
+        # eat a deathly apple to die
+        if self.game.isCollision(self.apple_deathly.x, self.apple_deathly.y, self.snake.x[0], self.snake.y[0]):
+            print("Eat a bad apple")
+            if(random() > 0.5):
+                self.snake.DecreaseFlag = True
                 self.appleUpdate()
-                self.snake.IncreaseFlag = True
-                self.apple += 1
+                # update Q Table
+                if agent != None:
+                    newstate = self.getStateFromAgent(agent)
+                    agent.updateTable(currentState, newstate, 0.8, self.snake.direction)
 
-            # eat a deathly apple to die
-            if self.game.isCollision(self.apple_deathly.x, self.apple_deathly.y, self.snake.x[i], self.snake.y[i]):
-                print("Eat a bad apple")
-                if(random() > 0.5):
-                    self.snake.DecreaseFlag = True
-                    self.appleUpdate()
-                else:
-                    print("You lose! Collision by eatting An apple from the hell")
-                    print("You have eaten ", self.apple, " apples")
-                    print("x[0] (" + str(self.snake.x[0]) +
-                          "," + str(self.snake.y[0]) + ")")
-                    print("x[" + str(i) + "] (" + str(self.snake.x[i]
-                                                      ) + "," + str(self.snake.y[i]) + ")")
-
-                    exit(0)
+            else:
+                print("You lose! Collision by eatting An apple from the hell")
+                # print("You have eaten ", self.apple, " apples")
+                # print("x[0] (" + str(self.snake.x[0]) +
+                #         "," + str(self.snake.y[0]) + ")")
+                # print("apple:", self.apple_deathly.x, ", ", self.apple_deathly.y,"\n")
+                if agent != None:
+                    newstate = self.getStateFromAgent(agent)
+                    agent.updateTable(currentState, newstate, -1, self.snake.direction)
+                
+                self._running = False
+                return
 
         # does snake collide with itself?
         for i in range(1, self.snake.length):
             if self.game.isCollision(self.snake.x[0], self.snake.y[0], self.snake.x[i], self.snake.y[i]):
                 print("You lose! Collision by bitting yourself ")
-                print("You have eaten ", self.apple, " apples")
-                print("x[0] (" + str(self.snake.x[0]) +
-                      "," + str(self.snake.y[0]) + ")")
-                print("x[" + str(i) + "] (" + str(self.snake.x[i]) +
-                      "," + str(self.snake.y[i]) + ")")
-                exit(0)
+                # print("x[0] (" + str(self.snake.x[0]) +
+                #       "," + str(self.snake.y[0]) + ")")
+                # print("x[" + str(i) + "] (" + str(self.snake.x[i]) +
+                #       "," + str(self.snake.y[i]) + ")")
 
+                if agent != None:
+                    newstate = self.getStateFromAgent(agent)
+                    agent.updateTable(currentState, newstate, -2, self.snake.direction)
+                
+                self._running = False
+                return
+
+        # regular reward
+        if agent != None:
+            newstate = self.getStateFromAgent(agent)
+            
+            r = 0
+            if distanceGoodApple > self.getDistanceOfGoodApple():
+                r += 0.7
+            if distanceGoodApple < self.getDistanceOfGoodApple():
+                r -= 0.3
+            if distanceMagicApple > self.getDistanceOfMagicApple():
+                r += 0.5
+            if distanceMagicApple < self.getDistanceOfMagicApple():
+                r -= 0.3
+            agent.updateTable(currentState, newstate, r, self.snake.direction)
+       
         pass
 
     def on_render(self):
@@ -287,13 +383,22 @@ class App:
         self.apple_deathly.draw(self._display_surf, self._apple_surf_deathly)
         pygame.display.flip()
 
+    def getStateFromAgent(self, agent):
+        if not agent: return None 
+        return self.encode()
+        # return agent.getState( self.snake.x, self.snake.y, \
+        #     self.apple_deathly.x, self.apple_healthy.y, \
+        #     self.apple_healthy.x, self.apple_healthy.y, \
+        #     self.step)
+
     def on_cleanup(self):
         pygame.quit()
 
-    def on_execute(self):
+    def on_execute(self, agent = None, records = None):
         if self.on_init() == False:
             self._running = False
 
+        lifetime = 0
         while(self._running):
             pygame.event.pump()
 
@@ -315,41 +420,50 @@ class App:
                 if (keys[K_ESCAPE]):
                     self._running = False
 
-            if self.module == 1:
+            else:
                 select = 0
-                select = aStarSearching(self.snake.x, self.snake.y, \
-                            self.apple_healthy.x, self.apple_healthy.y, \
-                            self.apple_deathly.x, self.apple_deathly.y, \
-                            self.step, self.snake.direction)
+                if self.module == 1: # direct using A-star Searching
+                    select = aStarSearching(self.snake.x, self.snake.y, \
+                                self.apple_healthy.x, self.apple_healthy.y, \
+                                self.apple_deathly.x, self.apple_deathly.y, \
+                                self.step, self.snake.direction, self.snake.length)
+                
+                if self.module ==2: # Q Learnin
+                    currentState = self.getStateFromAgent(agent)
+                    select = agent.getAction(currentState)
 
-                if (select == 1):
+
+                if self.module == 3: # benchmark random chose
+                   select = randint(0,3)
+                # select = decode(currentState, self.snake, 
+                #     self.apple_healthy.x, self.apple_healthy.y, \
+                #     self.apple_deathly.x, self.apple_deathly.y, \
+                #     self.step)
+
+
+                if (select == 0):
                     self.snake.moveRight()
 
-                if (select == 2):
+                if (select == 1):
                     self.snake.moveLeft()
 
-                if (select == 3):
+                if (select == 2):
                     self.snake.moveUp()
 
-                if (select == 4):
+                if (select == 3):
                     self.snake.moveDown()
 
-                if (select == 5):
+                if (select == 4):
                     self._running = False
 
-            self.on_loop()
+            self.on_loop(agent)
             self.on_render()
-            self.getCurrentState()
 
-            # # WRITE TO FILE
-            # with open("record","a") as file:
-            #     json.dump(self.getCurrentState(), file)
+            lifetime+=1
+            time.sleep(10.0 / 1000.0)
 
-            # #READ FROM FILE
-            # with open('listfile.txt', 'r') as filehandle:
-            #     basicList = json.load(filehandle)
-
-            time.sleep(100.0 / 1000.0)
+        if records: records.append((self.apple,lifetime))
+        print("You have eaten ", self.apple, " apples and survive ", lifetime)
         self.on_cleanup()
 
 
@@ -357,12 +471,55 @@ if __name__ == "__main__":
 
     module = 0
     isprint = False
+    iterflag = False
+    itereterRange = 1000
+    vision_size = 2
+    vision_size_flag = False
     if sys.argv.__len__ != 0:
         for agm in sys.argv:
             if agm == "-a":  # A-star
                 module = 1
             if agm == "-p":
                 isprint = True
+            if agm == "-q": # Qlearning
+                module = 2
+            if agm == "-i":
+                iterflag = True
+                continue
+            if iterflag:
+                itereterRange = int(agm)
+                iterflag = False
+            if agm == "-vs":
+                vision_size_flag = True
+                continue
+            if vision_size_flag:
+                vision_size = int(agm)
+                vision_size_flag = False
+                continue
+            
+    if module != 2:
+        theApp = App(module, isprint=isprint)
+        theApp.on_execute()
 
-    theApp = App(module, isprint=isprint)
-    theApp.on_execute()
+    else:
+        agent = Qlearning([0,1,2,3])
+        records = []
+        for i in range(itereterRange):
+            print("Iterater: ", i)
+            theApp = App(module, isprint=isprint, vision_size=vision_size)
+            theApp.on_execute(agent, records)
+
+            # WRITE TO Qtable to FILE
+            qtable = defaultdict(list)
+            for state, q in agent.qTable.items():
+                qtable[state] = q.tolist() 
+
+            qtableWithCount = {"Qtabel": qtable, "StatesCounter": agent.stateCount}
+            with open("qTable.json","w") as file:
+                json.dump(qtable, file)
+            
+
+            # #READ FROM FILE
+            # with open('listfile.txt', 'r') as filehandle:
+            #     basicList = json.load(filehandle)
+        print (apples)
