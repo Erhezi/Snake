@@ -7,7 +7,7 @@ import json
 p = 0.5
 decay = 0.8
 
-with open("12x12_4x4.json","r") as fileResource:
+with open("12x12_5x5.json","r") as fileResource:
     b= json.load(fileResource)
 qtable = b["Qtabel"]
 

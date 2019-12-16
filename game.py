@@ -9,7 +9,7 @@ from astar import decode, aStarSearching
 from snake import Snake
 from qLearning import Qlearning
 from collections import defaultdict
-from expectimax import expectiMax
+from expectimax import expectiMax, expectiMaxWithQlearning
 
 class Apple:
     # x position
@@ -634,6 +634,6 @@ if __name__ == "__main__":
         # lifetimes = [a[1] for a in records]
         # effs = [a[2] for a in records] 
         # print ("Game results: ", records,"\n", "Max apples number: ", max(eatapples), "\nMax lifetime: ", max(lifetimes))
-        with open("Result.json", "w") as gameresults:
+        with open("Result.json", "a+") as gameresults:
             json.dump(records,gameresults)
         
