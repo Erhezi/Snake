@@ -7,7 +7,7 @@ import json
 p = 0.5
 decay = 0.8
 
-with open("qTable.json","r") as fileResource:
+with open("12x12_4x4.json","r") as fileResource:
     b= json.load(fileResource)
 qtable = b["Qtabel"]
 
@@ -116,7 +116,7 @@ def expect(snake_x,snake_y, apple_x,apple_y, apple_x_magic, apple_y_magic,step,d
     snakelist = getSnakelist(snake.x,snake.y)
     # for apple
     if (apple_x,apple_y) in snakelist: 
-        return 2
+        return 2, count
     if (apple_x_magic,apple_y_magic) in snakelist:
         if np.random.random() < p: 
             return 1*p, count
@@ -133,7 +133,7 @@ def expect(snake_x,snake_y, apple_x,apple_y, apple_x_magic, apple_y_magic,step,d
         return -1, count
     # for bit it self
     if any([snakelist[0] == a for a in snakelist[1:]]): 
-        return -1
+        return -1, count
     if depth == 0: return np.random.random(), count
 
     right, rcount = expect(snake.x,snake.y, apple_x,apple_y, \
@@ -144,7 +144,7 @@ def expect(snake_x,snake_y, apple_x,apple_y, apple_x_magic, apple_y_magic,step,d
         apple_x_magic, apple_y_magic,step,2,windowwide,windowhigh,depth-1, vision_size )
     down, dcount = expect(snake.x,snake.y, apple_x,apple_y, \
         apple_x_magic, apple_y_magic,step,3,windowwide,windowhigh,depth-1, vision_size )
-    return decay*(right+left+up+down) , count+rcount+lcount+ucount+dcount
+    return decay*(right+left+up+down), count+rcount+lcount+ucount+dcount
 
 
 

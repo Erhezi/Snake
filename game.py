@@ -9,7 +9,7 @@ from astar import decode, aStarSearching
 from snake import Snake
 from qLearning import Qlearning
 from collections import defaultdict
-# from expectimax import expectiMax
+from expectimax import expectiMax
 
 class Apple:
     # x position
@@ -39,8 +39,8 @@ class Game:
 
 class App:
 
-    windowWidth = 400
-    windowHeight = 400
+    windowWidth = 240
+    windowHeight = 240
     snake = None
     apple = 0
 
