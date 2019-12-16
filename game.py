@@ -39,8 +39,8 @@ class Game:
 
 class App:
 
-    windowWidth = 320
-    windowHeight = 320
+    windowWidth = 400
+    windowHeight = 400
     snake = None
     apple = 0
 
@@ -402,6 +402,7 @@ class App:
 
         lifetime = 0
         reward = 0
+        effs = 0
 
         while(self._running):
             pygame.event.pump()
@@ -432,23 +433,25 @@ class App:
                                 self.apple_healthy.x, self.apple_healthy.y, \
                                 self.step, self.snake.direction, 10)
 
-                # if self.module == 4: # direct using ExpectiMax
-                #     if lifetime > 20 and lifetime%20 == 0: 
-                #         select = randint(0,3)
-                #     else:
-                #         select = expectiMax(self.snake.x,self.snake.y, \
-                #             self.apple_healthy.x, self.apple_healthy.y, \
-                #             self.apple_deathly.x, self.apple_deathly.y, \
-                #             self.step, 4, self.windowWidth, self.windowHeight, self.vision_size)
+                if self.module == 4: # direct using ExpectiMax
+                    if lifetime > 20 and lifetime%20 == 0: 
+                        select = randint(0,3)
+                    else:
+                        select, eff= expectiMax(self.snake.x,self.snake.y, \
+                            self.apple_healthy.x, self.apple_healthy.y, \
+                            self.apple_deathly.x, self.apple_deathly.y, \
+                            self.step, 4, self.windowWidth, self.windowHeight, self.vision_size)
+                        effs += eff
 
-                # if self.module == 5: # direct using ExpectiMax
-                #     if lifetime > 20 and lifetime%20 == 0: 
-                #         select = randint(0,3)
-                #     else:
-                #         select = expectiMaxWithQlearning(self.snake.x,self.snake.y, \
-                #             self.apple_healthy.x, self.apple_healthy.y, \
-                #             self.apple_deathly.x, self.apple_deathly.y, \
-                #             self.step, 4, self.windowWidth, self.windowHeight, self.vision_size)
+                if self.module == 5: # direct using ExpectiMax
+                    if lifetime > 20 and lifetime%20 == 0: 
+                        select = randint(0,3)
+                    else:
+                        select, eff = expectiMaxWithQlearning(self.snake.x,self.snake.y, \
+                            self.apple_healthy.x, self.apple_healthy.y, \
+                            self.apple_deathly.x, self.apple_deathly.y, \
+                            self.step, 4, self.windowWidth, self.windowHeight, self.vision_size)
+                        effs += eff
                     
                 
                 if self.module ==2: # Q Learnin
@@ -502,7 +505,10 @@ class App:
             lifetime+=1
             time.sleep(10.0 / 1000.0)
 
-        if records != None: records.append((self.apple,lifetime, reward/lifetime))
+        if records != None: 
+            if self.module == 2: records.append((self.apple,lifetime, reward/lifetime))
+            if self.module == 3: records.append((self.apple,lifetime))
+            if self.module == 4 or self.module == 5: records.append((self.apple,lifetime,effs/lifetime))
 
         print("You have eaten ", self.apple, " apples and survive ", lifetime)
         self.on_cleanup()
@@ -531,7 +537,7 @@ if __name__ == "__main__":
                 module = 3
             if agm == "-e":  # ExpectiMax
                 module = 4
-            if agm == "-eq":  # ExpectiMax
+            if agm == "-eq":  # ExpectiMaxWithQlearning
                 module = 5
             if agm == "-i":
                 iterflag = True
@@ -612,7 +618,7 @@ if __name__ == "__main__":
             json.dump(records,gameresults)
 
 
-    elif module==4:
+    elif module==4 or module == 5:
         print("Play the game ", itereterRange, "times ramndomly as an ExpectiMax\n")
         statesCounter = defaultdict(int)
         for i in range(itereterRange):
@@ -624,10 +630,10 @@ if __name__ == "__main__":
             #     with open("State.json","w") as file:
             #         json.dump(statesCounter, file)
 
-        eatapples = [a[0] for a in records]
-        lifetimes = [a[1] for a in records]
-        # rewards = [a[2] for a in records] 
-        print ("Game results: ", records,"\n", "Max apples number: ", max(eatapples), "\nMax lifetime: ", max(lifetimes))
-        # with open("Result.json", "w") as gameresults:
-        #     json.dump(records,gameresults)
+        # eatapples = [a[0] for a in records]
+        # lifetimes = [a[1] for a in records]
+        # effs = [a[2] for a in records] 
+        # print ("Game results: ", records,"\n", "Max apples number: ", max(eatapples), "\nMax lifetime: ", max(lifetimes))
+        with open("Result.json", "w") as gameresults:
+            json.dump(records,gameresults)
         

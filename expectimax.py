@@ -17,26 +17,27 @@ def getSnakelist(snake_x,snake_y):
     return [(snake_x[i],snake_y[i]) for i in range(len(snake_x))]
 
 def expectiMax(snake_x,snake_y, apple_x,apple_y, apple_x_magic, apple_y_magic,step,depth,windowwide,windowhigh,vision_size):
-    right = expect(snake_x, snake_y, apple_x,apple_y, \
+    right, rc = expect(snake_x, snake_y, apple_x,apple_y, \
         apple_x_magic, apple_y_magic,step,0,windowwide,windowhigh,depth,vision_size)
-    left = expect(snake_x, snake_y, apple_x,apple_y, \
+    left, lc = expect(snake_x, snake_y, apple_x,apple_y, \
         apple_x_magic, apple_y_magic,step,1,windowwide,windowhigh,depth,vision_size)
-    up = expect(snake_x, snake_y, apple_x,apple_y, \
+    up, uc = expect(snake_x, snake_y, apple_x,apple_y, \
         apple_x_magic, apple_y_magic,step,2,windowwide,windowhigh,depth,vision_size)
-    down = expect(snake_x, snake_y, apple_x,apple_y, \
+    down, dc = expect(snake_x, snake_y, apple_x,apple_y, \
         apple_x_magic, apple_y_magic,step,3,windowwide,windowhigh,depth,vision_size)
-    return np.argmax([right, left, up, down])
+    return np.argmax([right, left, up, down]),rc+lc+uc+dc
 
 def expectiMaxWithQlearning(snake_x,snake_y, apple_x,apple_y, apple_x_magic, apple_y_magic,step,depth,windowwide,windowhigh,vision_size):
-    right = expectWithQlearning(snake_x, snake_y, apple_x,apple_y, \
+    right, rc = expectWithQlearning(snake_x, snake_y, apple_x,apple_y, \
         apple_x_magic, apple_y_magic,step,0,windowwide,windowhigh,depth,vision_size)
-    left = expectWithQlearning(snake_x, snake_y, apple_x,apple_y, \
+    left, lc = expectWithQlearning(snake_x, snake_y, apple_x,apple_y, \
         apple_x_magic, apple_y_magic,step,1,windowwide,windowhigh,depth,vision_size)
-    up = expectWithQlearning(snake_x, snake_y, apple_x,apple_y, \
+    up, uc = expectWithQlearning(snake_x, snake_y, apple_x,apple_y, \
         apple_x_magic, apple_y_magic,step,2,windowwide,windowhigh,depth,vision_size)
-    down = expectWithQlearning(snake_x, snake_y, apple_x,apple_y, \
+    down, dc = expectWithQlearning(snake_x, snake_y, apple_x,apple_y, \
         apple_x_magic, apple_y_magic,step,3,windowwide,windowhigh,depth,vision_size)
-    return np.argmax([right, left, up, down])
+    return np.argmax([right, left, up, down]),rc+lc+uc+dc
+
 
 
 def expectWithQlearning(snake_x,snake_y, apple_x,apple_y, apple_x_magic, apple_y_magic,step,direction,windowwide,windowhigh,depth,vision_size):
@@ -49,55 +50,56 @@ def expectWithQlearning(snake_x,snake_y, apple_x,apple_y, apple_x_magic, apple_y
 
     currentState = encode_ql(snake, apple_x, apple_y, apple_x_magic, apple_y_magic,vision_size,windowwide,windowhigh)
     
+    count = 1
     # check to terminate
     snakelist = getSnakelist(snake.x,snake.y)
     # for apple
     if (apple_x,apple_y) in snakelist: 
         if currentState in qtable.keys():
-            return max(qtable[currentState])
-        return 2
+            return max(qtable[currentState]), count
+        return 2, count
     if (apple_x_magic,apple_y_magic) in snakelist:
         if np.random.random() < p: 
             if currentState in qtable.keys():
-                return max(qtable[currentState])
-            return 1*p
+                return max(qtable[currentState]), count
+            return 1*p, count
         else: 
             if currentState in qtable.keys():
-                return max(qtable[currentState])
-            return -1
+                return max(qtable[currentState]), count
+            return -1, count
     # for boundary
     if any([a< 0 for a in snake.x]): 
         if currentState in qtable.keys():
-            return max(qtable[currentState])
-        return -1
+            return max(qtable[currentState]), count
+        return -1, count
     if any([a >= windowwide for a in snake.x]): 
         if currentState in qtable.keys():
-            return max(qtable[currentState])
-        return -1
+            return max(qtable[currentState]), count
+        return -1, count
     if any([a< 0 for a in snake.y]): 
         if currentState in qtable.keys():
-            return max(qtable[currentState])
-        return -1
+            return max(qtable[currentState]), count
+        return -1, count
     if any([a >= windowhigh for a in snake.y]): 
         if currentState in qtable.keys():
-            return max(qtable[currentState])
-        return -1 
+            return max(qtable[currentState]), count
+        return -1, count
     # for bit it self
     if any([snakelist[0] == a for a in snakelist[1:]]): 
         if currentState in qtable.keys():
-            return max(qtable[currentState])
-        return -1
-    if depth == 0: return np.random.random()
+            return max(qtable[currentState]), count
+        return -1, count
+    if depth == 0: return np.random.random(), count
 
-    right = expect(snake.x,snake.y, apple_x,apple_y, \
+    right, rc = expect(snake.x,snake.y, apple_x,apple_y, \
         apple_x_magic, apple_y_magic,step,0,windowwide,windowhigh,depth-1,vision_size)
-    left = expect(snake.x,snake.y, apple_x,apple_y, \
+    left, lc = expect(snake.x,snake.y, apple_x,apple_y, \
         apple_x_magic, apple_y_magic,step,1,windowwide,windowhigh,depth-1, vision_size )
-    up = expect(snake.x,snake.y, apple_x,apple_y, \
+    up, uc = expect(snake.x,snake.y, apple_x,apple_y, \
         apple_x_magic, apple_y_magic,step,2,windowwide,windowhigh,depth-1, vision_size )
-    down = expect(snake.x,snake.y, apple_x,apple_y, \
+    down, dc = expect(snake.x,snake.y, apple_x,apple_y, \
         apple_x_magic, apple_y_magic,step,3,windowwide,windowhigh,depth-1, vision_size )
-    return decay*(right+left+up+down)
+    return decay*(right+left+up+down), count+rc+lc+uc+dc
 
 def expect(snake_x,snake_y, apple_x,apple_y, apple_x_magic, apple_y_magic,step,direction,windowwide,windowhigh,depth,vision_size):
     # update snake
@@ -109,6 +111,7 @@ def expect(snake_x,snake_y, apple_x,apple_y, apple_x_magic, apple_y_magic,step,d
 
     currentState = encode_ql(snake, apple_x, apple_y, apple_x_magic, apple_y_magic,vision_size,windowwide,windowhigh)
     
+    count = 1
     # check to terminate
     snakelist = getSnakelist(snake.x,snake.y)
     # for apple
@@ -116,32 +119,32 @@ def expect(snake_x,snake_y, apple_x,apple_y, apple_x_magic, apple_y_magic,step,d
         return 2
     if (apple_x_magic,apple_y_magic) in snakelist:
         if np.random.random() < p: 
-            return 1*p
+            return 1*p, count
         else: 
-            return -1
+            return -1, count
     # for boundary
     if any([a< 0 for a in snake.x]): 
-        return -1
+        return -1, count
     if any([a >= windowwide for a in snake.x]): 
-        return -1
+        return -1, count
     if any([a< 0 for a in snake.y]): 
-        return -1
+        return -1, count
     if any([a >= windowhigh for a in snake.y]): 
-        return -1 
+        return -1, count
     # for bit it self
     if any([snakelist[0] == a for a in snakelist[1:]]): 
         return -1
-    if depth == 0: return np.random.random()
+    if depth == 0: return np.random.random(), count
 
-    right = expect(snake.x,snake.y, apple_x,apple_y, \
+    right, rcount = expect(snake.x,snake.y, apple_x,apple_y, \
         apple_x_magic, apple_y_magic,step,0,windowwide,windowhigh,depth-1,vision_size)
-    left = expect(snake.x,snake.y, apple_x,apple_y, \
+    left, lcount = expect(snake.x,snake.y, apple_x,apple_y, \
         apple_x_magic, apple_y_magic,step,1,windowwide,windowhigh,depth-1, vision_size )
-    up = expect(snake.x,snake.y, apple_x,apple_y, \
+    up, ucount = expect(snake.x,snake.y, apple_x,apple_y, \
         apple_x_magic, apple_y_magic,step,2,windowwide,windowhigh,depth-1, vision_size )
-    down = expect(snake.x,snake.y, apple_x,apple_y, \
+    down, dcount = expect(snake.x,snake.y, apple_x,apple_y, \
         apple_x_magic, apple_y_magic,step,3,windowwide,windowhigh,depth-1, vision_size )
-    return decay*(right+left+up+down)
+    return decay*(right+left+up+down) , count+rcount+lcount+ucount+dcount
 
 
 
