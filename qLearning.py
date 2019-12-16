@@ -1,9 +1,10 @@
 # Q-learning
-# Get some ideals of state from； https://github.com/italohdc/LearnSnake/blob/master
+# Get some ideals of state from； https://github.com/italohdc/LearnSnake
 # State: snakeReletivePostions, GoodAppleReletivePostion, BadAppleReletivePostion
 
 import numpy as np
 from collections import defaultdict
+import json
 from functools import partial
 
 
@@ -18,13 +19,20 @@ def getRelative(x1, benchmark, step):
 
 class Qlearning:
 
-    def __init__(self, actions, rate=0.8, decayRate=0.7):
+    def __init__(self, actions, rate=0.8, decayRate=0.7, file = None):
 
         self.actions = actions
-        self.qTable = defaultdict(partial(np.zeros, len(actions)))
-        self.stateCount = defaultdict(int)
         self.learningRate = rate
         self.decayRate = decayRate
+        self.qTable = defaultdict(partial(np.random.rand, len(actions)))
+        self.stateCount = defaultdict(partial(np.zeros, len(actions)))
+        if file != None:
+            with open(file,"r") as fileResource:
+                b= json.load(fileResource)
+            for k,q in b["Qtabel"].items():
+                self.qTable[k]=np.array(q)
+            for s, v in b["StatesCounter"].items():
+                self.stateCount[s] = np.array(v)
 
     def getState(self, snake_x, snake_y, magicApple_x, magicApple_y, goodApple_x, goodApple_y, step):
         # head_x = snake_x[0]
@@ -47,15 +55,83 @@ class Qlearning:
         pass
 
     def updateTable(self, state1, state2, r, act):
-        self.stateCount[state1] += 1
-        self.qTable[state1][act] += self.learningRate * \
+        self.stateCount[state1][act] += 1
+        learningRate = 1/self.stateCount[state1][act]
+        self.qTable[state1][act] += learningRate * \
             (r + self.decayRate*np.max(self.qTable[state2])
              - self.qTable[state1][act])
 
+    def getReward(self, state,act):
+        return self.qTable[state][act]
+
     def getAction(self, state):
-        # many visits = low probability of explore
-        if self.stateCount[state] == 0: self.stateCount[state] = 1
-        explore = (np.random.rand() < self.stateCount[state]**(-1))
-        if explore:
-            return np.random.randint(len(self.actions)-1)
+        # # many visits = low probability of explore
+        # if self.stateCount[state] == 0: self.stateCount[state] = 1
+        # explore = (np.random.rand() < self.stateCount[state]**(-1)*20)
+        # # explore = (np.random.rand() < self.stateCount[state]>20)
+        # if explore:
+            
+        #     a =  np.random.randint(0,len(self.actions)-1)
+        #     print(a)
+        #     return a
         return np.argmax(self.qTable[state])
+
+    def translateAgentAction(self, act, direction):
+        if direction == 0:
+            if act == 0:
+                return 2
+            if act == 1:
+                return 0
+            if act == 2:
+                return 3
+        if direction == 1:
+            if act == 0:
+                return 0
+            if act == 1:
+                return 1
+            if act == 2:
+                return 2
+        if direction == 2:
+            if act == 0:
+                return 1
+            if act == 1:
+                return 2
+            if act == 2:
+                return 0
+        if direction == 3:
+            if act == 0:
+                return 0
+            if act == 1:
+                return 3
+            if act == 2:
+                return 1
+
+    def translateAppAction(self, act, direction):
+        if direction == 0:
+            if act == 0:
+                return 1
+            if act == 2:
+                return 0
+            if act == 3:
+                return 2
+        if direction == 1:
+            if act == 3:
+                return 0
+            if act == 1:
+                return 1
+            if act == 2:
+                return 2
+        if direction == 2:
+            if act == 1:
+                return 0
+            if act == 2:
+                return 1
+            if act == 0:
+                return 2
+        if direction == 3:
+            if act == 0:
+                return 0
+            if act == 3:
+                return 1
+            if act == 1:
+                return 2

@@ -24,6 +24,7 @@
 
 import collections
 from random import random
+from snake import Snake
 
 def decode(state, snake, apple_good_x, apple_good_y, apple_magic_x, apple_magic_y,step):
     iswatchingapple_good, iswatchingapple_magic = False, False
@@ -60,25 +61,27 @@ def decode(state, snake, apple_good_x, apple_good_y, apple_magic_x, apple_magic_
         if snake.direction == 3:
             return 2
 
-def aStarSearching(snake_x,snake_y, apple_x,apple_y, apple_x_magic, apple_y_magic,step,direction,length):
+def aStarSearching(snake_x,snake_y, apple_x,apple_y,step,direction,depth):
     snake = [(snake_x[i], snake_y[i]) for i in range(len(snake_x))]
     fronter = collections.defaultdict(int)
     fronter[snake[0]] = GetH(snake[0][0],snake[0][1],apple_x,apple_y)
     exploied = []
     count = 0
+    position_old = snake[0]
     while len(fronter)!= 0:
         print("Fronter: ", fronter, "\n")
         position, h = sorted(fronter.items(), key=lambda t: t[1])[0]
         fronter.pop(position)
         print("pop Fronter: ", position ," h: ", h,"\n")
+        # renew snake 
+        snake = regenerateSnake(snake, translateSign(position[0],position[1], position_old[0], position_old[1]))
         # Explored the frintier and  add to explored if not there
         if position not in exploied: exploied.append(position)
         # reach the target return the direction
         if position[0]== apple_x and position[1] == apple_y:
             if count == 0: return direction
-            return translateSign(exploied[1][0],exploied[1][1], exploied[0][0], exploied[0][1])
+            return translateSign(exploied[1][0],exploied[1][1], exploied[0][0], exploied[0][1]), 1
 
-        
         for i in ["x","y"]:
             for j in [-1,1]:
                 if i == "x":
@@ -88,7 +91,8 @@ def aStarSearching(snake_x,snake_y, apple_x,apple_y, apple_x_magic, apple_y_magi
                     ynew = position[1] + j*step
                     xnew = position[0]
                 if (xnew, ynew) in snake: continue
-                if xnew == apple_x_magic and ynew == apple_y_magic: continue
+                # if xnew == apple_x_magic and ynew == apple_y_magic: 
+                #     if random()< 0.5: continue
                 if (xnew < 0 or ynew < 0): continue
                 if (xnew, ynew) in fronter.keys():
                     fronter[(xnew,ynew)] = min(fronter[(xnew,ynew)], GetH(xnew,ynew,apple_x,apple_y)+count)
@@ -96,10 +100,10 @@ def aStarSearching(snake_x,snake_y, apple_x,apple_y, apple_x_magic, apple_y_magi
                     fronter[(xnew,ynew)] = GetH(xnew,ynew,apple_x,apple_y) + count
         print("After exploring Current explied:", exploied, "\n")
         count += 1
-        if count > length: break
+        if count > depth: break
     print("After exploring Current explied:", exploied, "\n")
     if len(exploied)<2: return direction
-    return translateSign(exploied[1][0],exploied[1][1], exploied[0][0], exploied[0][1])
+    return translateSign(exploied[1][0],exploied[1][1], exploied[0][0], exploied[0][1]),0
 
     
 
@@ -120,5 +124,13 @@ def translateSign(x1,y1,hx,hy):
     if y1>hy: 
         print("Selected Down")
         return 3
-   
-
+    return 4 # same state
+def regenerateSnake(snake,action):
+    if action == 4: return snake
+    snakeObj = Snake(length=len(snake))
+    for i in range(len(snake)):
+        snakeObj.x[i] = snake[i][0]
+        snakeObj.y[i] = snake[i][1]
+    snakeObj.direction = action
+    snakeObj.update(3)
+    return [(snakeObj.x[i],snakeObj.y[i]) for i in range(len(snake))]
