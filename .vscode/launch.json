@@ -10,10 +10,10 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "args": ["-e","-vs", "5","-i", "20"],
-            //"args": ["-q","-vs", "4", "-i", "800"],
+            //"args": ["-r","-vs", "5","-i", "100"],
+            //"args": ["-q","-vs", "1", "-i", "800"],
             //"args": ["-e","-vs", "4", "-i", "500"],
-            //"args": ["-q","-vs", "4", "-i","850","-f","qTable.json"],
+            "args": ["-q","-vs", "4", "-i","850","-f","qTable.json"],
         },
         {
             "name": "Python: Remote Attach",
