@@ -9,6 +9,7 @@ from astar import decode, aStarSearching
 from snake import Snake
 from qLearning import Qlearning
 from collections import defaultdict
+# from expectimax import expectiMax
 
 class Apple:
     # x position
@@ -38,8 +39,8 @@ class Game:
 
 class App:
 
-    windowWidth = 240
-    windowHeight = 240
+    windowWidth = 320
+    windowHeight = 320
     snake = None
     apple = 0
 
@@ -57,8 +58,8 @@ class App:
         self.step = step
         self.game = Game()
         self.snake = Snake(3, step)
-        self.apple_healthy = Apple(randint(0,6), randint(2,5), step)
-        self.apple_deathly = Apple(randint(7,10), randint(5,10), step)
+        self.apple_deathly = Apple(randint(0,6), randint(2,5), step)
+        self.apple_healthy = Apple(randint(7,10), randint(5,10), step)
         self.isprint = isprint
         self.vision_size = vision_size
 
@@ -300,16 +301,16 @@ class App:
                 newstate = self.getStateFromAgent(agent)
                 agent.updateTable(currentState, newstate, -100, select)
 
-            print("You out of region!")
-            print(self.snake.x[:self.snake.length])
-            print(self.snake.y[:self.snake.length])
+            # print("You out of region!")
+            # print(self.snake.x[:self.snake.length])
+            # print(self.snake.y[:self.snake.length])
             self._running = False
             return
 
         # does snake eat apple?
         # eat a healthy apple to grow up
         if self.game.isCollision(self.apple_healthy.x, self.apple_healthy.y, self.snake.x[0], self.snake.y[0]):
-            print("Eat a good apple")
+            # print("Eat a good apple")
             self.appleUpdate()
             self.snake.IncreaseFlag = True
             self.apple += 1
@@ -321,7 +322,7 @@ class App:
 
         # eat a deathly apple to die
         if self.game.isCollision(self.apple_deathly.x, self.apple_deathly.y, self.snake.x[0], self.snake.y[0]):
-            print("Eat a bad apple")
+            # print("Eat a bad apple")
             self.apple += 1
             if(random() > 0.5):
                 self.snake.DecreaseFlag = True
@@ -332,7 +333,7 @@ class App:
                     agent.updateTable(currentState, newstate, 100, select)
 
             else:
-                print("You lose! Collision by eatting An apple from the hell")
+                # print("You lose! Collision by eatting An apple from the hell")
                 # print("You have eaten ", self.apple, " apples")
                 # print("x[0] (" + str(self.snake.x[0]) +
                 #         "," + str(self.snake.y[0]) + ")")
@@ -347,7 +348,7 @@ class App:
         # does snake collide with itself?
         for i in range(1, self.snake.length):
             if self.game.isCollision(self.snake.x[0], self.snake.y[0], self.snake.x[i], self.snake.y[i]):
-                print("You lose! Collision by bitting yourself ")
+                # print("You lose! Collision by bitting yourself ")
                 # print("x[0] (" + str(self.snake.x[0]) +
                 #       "," + str(self.snake.y[0]) + ")")
                 # print("x[" + str(i) + "] (" + str(self.snake.x[i]) +
@@ -430,6 +431,25 @@ class App:
                     select, _ = aStarSearching(self.snake.x, self.snake.y, \
                                 self.apple_healthy.x, self.apple_healthy.y, \
                                 self.step, self.snake.direction, 10)
+
+                # if self.module == 4: # direct using ExpectiMax
+                #     if lifetime > 20 and lifetime%20 == 0: 
+                #         select = randint(0,3)
+                #     else:
+                #         select = expectiMax(self.snake.x,self.snake.y, \
+                #             self.apple_healthy.x, self.apple_healthy.y, \
+                #             self.apple_deathly.x, self.apple_deathly.y, \
+                #             self.step, 4, self.windowWidth, self.windowHeight, self.vision_size)
+
+                # if self.module == 5: # direct using ExpectiMax
+                #     if lifetime > 20 and lifetime%20 == 0: 
+                #         select = randint(0,3)
+                #     else:
+                #         select = expectiMaxWithQlearning(self.snake.x,self.snake.y, \
+                #             self.apple_healthy.x, self.apple_healthy.y, \
+                #             self.apple_deathly.x, self.apple_deathly.y, \
+                #             self.step, 4, self.windowWidth, self.windowHeight, self.vision_size)
+                    
                 
                 if self.module ==2: # Q Learnin
                     currentState = self.getStateFromAgent(agent)
@@ -480,7 +500,7 @@ class App:
             self.on_render()
 
             lifetime+=1
-            time.sleep(100.0 / 1000.0)
+            time.sleep(10.0 / 1000.0)
 
         if records != None: records.append((self.apple,lifetime, reward/lifetime))
 
@@ -509,6 +529,10 @@ if __name__ == "__main__":
                 module = 2
             if agm == "-r":  # benchmark
                 module = 3
+            if agm == "-e":  # ExpectiMax
+                module = 4
+            if agm == "-eq":  # ExpectiMax
+                module = 5
             if agm == "-i":
                 iterflag = True
                 continue
@@ -556,7 +580,7 @@ if __name__ == "__main__":
             for state, v in agent.stateCount.items():
                 statetable[state] = v.tolist() 
 
-            if i % 10 == 0:
+            if i % 50 == 0:
                 qtableWithCount = {"Qtabel": qtable, "StatesCounter": statetable}
                 with open("qTable.json","w") as file:
                     json.dump(qtableWithCount, file)
@@ -565,7 +589,7 @@ if __name__ == "__main__":
         lifetimes = [a[1] for a in records]
         rewards = [a[2] for a in records] 
         print ("Game results: ", records,"\n", "Max apples number: ", max(eatapples), "\nMax lifetime: ", max(lifetimes),"\nMax reward: ", max(rewards))
-        with open("Result.json", "w") as gameresults:
+        with open("Result.json", "a+") as gameresults:
             json.dump(records,gameresults)
 
     elif module==3:
@@ -586,4 +610,24 @@ if __name__ == "__main__":
         print ("Game results: ", records,"\n", "Max apples number: ", max(eatapples), "\nMax lifetime: ", max(lifetimes))
         with open("Result.json", "w") as gameresults:
             json.dump(records,gameresults)
+
+
+    elif module==4:
+        print("Play the game ", itereterRange, "times ramndomly as an ExpectiMax\n")
+        statesCounter = defaultdict(int)
+        for i in range(itereterRange):
+            print("Iterater: ", i)
+            theApp = App(module, isprint=isprint, vision_size=vision_size)
+            theApp.on_execute(records=records, statesCounter=statesCounter)
+
+            # if i % 100 == 0:
+            #     with open("State.json","w") as file:
+            #         json.dump(statesCounter, file)
+
+        eatapples = [a[0] for a in records]
+        lifetimes = [a[1] for a in records]
+        # rewards = [a[2] for a in records] 
+        print ("Game results: ", records,"\n", "Max apples number: ", max(eatapples), "\nMax lifetime: ", max(lifetimes))
+        # with open("Result.json", "w") as gameresults:
+        #     json.dump(records,gameresults)
         
